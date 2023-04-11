@@ -18,7 +18,7 @@ enum Commands {
     Add(AddArgs),
     Remove(RemoveArgs),
     List(ListArgs),
-    // Update(UpdateArgs),
+    Update(UpdateArgs),
     Clone(CloneArgs),
 }
 
@@ -40,7 +40,11 @@ struct ListArgs {}
 
 #[derive(Args)]
 struct UpdateArgs {
+    path: String,
     name: String,
+
+    #[arg(short, long)]
+    rename: Option<String>,
 }
 
 #[derive(Args)]
@@ -83,7 +87,7 @@ impl Master {
         std::fs::write(&self.config_file, config).unwrap();
     }
 
-    // Copy template to template and save config
+    // Copy template to template
     fn add(&mut self, add_args: AddArgs) -> Result<(), Box<dyn std::error::Error>> {
         // check if path exists
         let path = std::path::PathBuf::from(&add_args.path);
@@ -121,10 +125,10 @@ impl Master {
         }
         match target_dir.is_dir() {
             true => {
-                std::fs::remove_dir_all(&target_dir).unwrap();
+                fs::remove_dir_all(&target_dir).unwrap();
             }
             false => {
-                std::fs::remove_file(&target_dir).unwrap();
+                fs::remove_file(&target_dir).unwrap();
             }
         }
         Ok(())
@@ -144,17 +148,16 @@ impl Master {
         Ok(())
     }
 
-    // fn update(&mut self, update_args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
-    //     let target_dir = self.templates_dir.join(update_args.name);
-    //     if !target_dir.exists() {
-    //         eprintln!("Template name not exists");
-    //         process::exit(1);
-    //     }
-    //     let mut options = fs_extra::dir::CopyOptions::new();
-    //     options.copy_inside = true;
-    //     fs_extra::dir::copy(&std::env::current_dir()?, &target_dir, &options).unwrap();
-    //     Ok(())
-    // }
+    fn update(&mut self, update_args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
+        self.remove(RemoveArgs {
+            name: update_args.name.clone(),
+        })?;
+        self.add(AddArgs {
+            path: update_args.path,
+            rename: update_args.rename,
+        })?;
+        Ok(())
+    }
 
     fn clone(&mut self, clone_args: CloneArgs) -> Result<(), Box<dyn std::error::Error>> {
         let template_dir = self.templates_dir.join(clone_args.name);
@@ -184,7 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Add(add_args) => master.add(add_args)?,
         Commands::Remove(remove_args) => master.remove(remove_args)?,
         Commands::List(_) => master.list_temps()?,
-        // Commands::Update(update_args) => master.update(update_args)?,
+        Commands::Update(update_args) => master.update(update_args)?,
         Commands::Clone(clone_args) => master.clone(clone_args)?,
     }
     Ok(())
