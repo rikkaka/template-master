@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, Args};
-use std::process;
+use std::{process, fs};
 use dirs;
 use toml;
 
@@ -24,10 +24,10 @@ enum Commands {
 
 #[derive(Args)]
 struct AddArgs {
-    path: Option<String>,
+    path: String,
 
     #[arg(short, long)]
-    name: Option<String>,
+    rename: Option<String>,
 }
 
 #[derive(Args)]
@@ -83,29 +83,33 @@ impl Master {
         std::fs::write(&self.config_file, config).unwrap();
     }
 
-    // Copy template to target dir and save config
+    // Copy template to template and save config
     fn add(&mut self, add_args: AddArgs) -> Result<(), Box<dyn std::error::Error>> {
         // check if path exists
-        let path = add_args.path.unwrap_or(std::env::current_dir()?.to_str().unwrap().to_string());
-        let path = std::path::PathBuf::from(&path);
+        let path = std::path::PathBuf::from(&add_args.path);
         let path = std::fs::canonicalize(&path)?;
         if !path.exists() {
             eprintln!("Template path not exists");
             process::exit(1);
         }
 
-        // move template in the working dir to self.templates_dir+"/name/"
-        let name = add_args.name.unwrap_or(path.file_name().unwrap().to_str().unwrap().to_string());
-        let target_dir = self.templates_dir.join(&name);
-        // let target_dir = std::fs::canonicalize(&target_dir)?;
-        if target_dir.exists() {
+        // move template in the working dir to self.templates_dir
+        let name = add_args.rename.unwrap_or(path.file_name().unwrap().to_str().unwrap().to_string());
+        let target_file = self.templates_dir.join(&name);
+        if target_file.exists() {
             eprintln!("Template name already exists");
             process::exit(1);
         }
-        std::fs::create_dir(&target_dir).unwrap();
-        let mut options = fs_extra::dir::CopyOptions::new();
-        options.copy_inside = true;
-        fs_extra::dir::copy(&path, &target_dir, &options).unwrap();
+        match path.is_dir() {
+            true => {
+                let mut options = fs_extra::dir::CopyOptions::new();
+                options.copy_inside = true;
+                fs_extra::dir::copy(&path, &target_file, &options).unwrap();
+            }
+            false => {
+                fs::copy(&path, &target_file).unwrap();
+            }
+        }
         Ok(())
     }
 
@@ -115,7 +119,14 @@ impl Master {
             eprintln!("Template name not exists");
             process::exit(1);
         }
-        std::fs::remove_dir_all(&target_dir).unwrap();
+        match target_dir.is_dir() {
+            true => {
+                std::fs::remove_dir_all(&target_dir).unwrap();
+            }
+            false => {
+                std::fs::remove_file(&target_dir).unwrap();
+            }
+        }
         Ok(())
     }
 
@@ -152,23 +163,18 @@ impl Master {
             process::exit(1);
         }
         
-        let template_files = std::fs::read_dir(&template_dir)?;
-        for entry in template_files {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
-                let target_path = std::env::current_dir()?.join(&file_name);
-                if target_path.exists() {
-                    eprintln!("File {} already exists", file_name);
-                    process::exit(1);
-                }
-                std::fs::copy(&path, &target_path).unwrap();
+        match template_dir.is_dir() {
+            true => {
+                let mut options = fs_extra::dir::CopyOptions::new();
+                options.copy_inside = true;
+                fs_extra::dir::copy(&template_dir, &std::env::current_dir()?, &options).unwrap();
+            }
+            false => {
+                fs::copy(&template_dir, &std::env::current_dir()?).unwrap();
             }
         }
         Ok(())
     }
-
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
