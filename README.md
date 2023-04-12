@@ -15,7 +15,9 @@ cargo install --path .
 ```bash
 tempmaster add <template_path>
 ```
-Also can use --rename to add a renamed template:
+<template_path> can both be a file or a folder. 
+
+Use --rename to add a renamed template:
 ```bash
 tempmaster add example.tex --rename renamed.tex
 ```
