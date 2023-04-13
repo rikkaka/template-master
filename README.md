@@ -1,35 +1,35 @@
-# Introduce
-A Simple Command Line Tool for Streamlined Template Management
+# Introduction
+A sleek command-line tool for easy template management. The tool is still under development but is usable.
 
-Still in development, but it can be used.
-
-# Usage
-## Install
-Ensure your rust environment is ready, then run:
+# Installation
+First, make sure your Rust environment is set up. Then, run these commands:
 ```bash
 git clone https://github.com/rikkaka/template-master
 cd template-master
 cargo install --path .
 ```
-## Add a template
-```bash
-tempmaster add <template_path>
-```
-- <template_path> can both be a file or a folder. 
-- Use --rename or -r to add a renamed template:
-```bash
-tempmaster add example.tex --rename renamed.tex
-```
-## remove a template
-```bash
-tempmaster remove <template_name>
-```
-## list all templates
-```bash
-tempmaster list
-```
-## use a template
-- Copy the template to current directory:
-```bash
-tempmaster clone <template_name>
-```
+
+# Usage
+- **Add Template**: 
+  ```bash
+  tempmaster add <template_path>
+  ```
+  `<template_path>` can be a file or folder. Use `--rename` or `-r` to add a template with a new name:
+  ```bash
+  tempmaster add example.tex --rename renamed.tex
+  ```
+
+- **Remove Template**: 
+  ```bash
+  tempmaster remove <template_name>
+  ```
+
+- **List Templates**: 
+  ```bash
+  tempmaster list
+  ```
+
+- **Use Template** (copy to the current directory): 
+  ```bash
+  tempmaster clone <template_name>
+  ```
