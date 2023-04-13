@@ -1,0 +1,16 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "cargo" # The package manager for Rust
+    directory: "/" # Directory where the Cargo.toml file is located
+    schedule:
+      interval: "daily" # Frequency of updates ("daily", "weekly", "monthly", or "live")
+    commit-message:
+      prefix: "dependency" # Optional: Prefix for the commit message
+      include: "scope" # Optional: Include the scope of the changes in the commit message
+    open-pull-requests-limit: 10 # Optional: Limit the number of open pull requests
+    target-branch: "main" # Optional: Specify the branch to create pull requests against
