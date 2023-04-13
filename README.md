@@ -1,5 +1,5 @@
 # Introduction
-A sleek command-line tool for easy template management. The tool is still under development but is usable.
+A sleek command-line tool for easy template management. Still under development but is usable.
 
 # Installation
 First, make sure your Rust environment is set up. Then, run these commands:
