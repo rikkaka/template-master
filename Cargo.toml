@@ -9,7 +9,10 @@ name = "tempmaster"
 path = "src/main.rs"
 
 [dependencies]
+assert_cmd = "2.0.10"
+assert_fs = "1.0.12"
 clap = { version = "4.2.1", features = ["derive"] }
 dirs = "5.0.0"
 fs_extra = "1.3.0"
+predicates = "3.0.2"
 toml = "0.7.3"

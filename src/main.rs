@@ -158,6 +158,11 @@ impl Master {
             eprintln!("Template name not exists");
             process::exit(1);
         }
+        let target_file = std::env::current_dir()?.join(&clone_args.name);
+        if target_file.exists() {
+            eprintln!("File name already exists");
+            process::exit(1);
+        }
         
         match template_dir.is_dir() {
             true => {
@@ -166,7 +171,7 @@ impl Master {
                 fs_extra::dir::copy(&template_dir, &std::env::current_dir()?, &options).unwrap();
             }
             false => {
-                fs::copy(&template_dir, &std::env::current_dir()?).unwrap();
+                fs::copy(&template_dir, &target_file).unwrap();
             }
         }
         Ok(String::from(format!("Template {} cloned", &clone_args.name)))
@@ -216,4 +221,56 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     println!("{}", result_str);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_cmd::Command;
+    use clap::CommandFactory;
+    use std::env;
+
+    // Function to simulate command line arguments
+    fn simulate_cmd_args<F: FnOnce()->R, R>(args: &[&str], test: F) -> R {
+        let mut args = args.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        args.insert(0, env::current_exe().unwrap().to_string_lossy().to_string());
+
+        let original_args = env::args().collect::<Vec<String>>();
+        env::set_var("RUST_TEST_TASK_ARGS", &args.join(" "));
+        let result = test();
+        env::set_var("RUST_TEST_TASK_ARGS", &original_args.join(" "));
+        result
+    }
+
+    #[test]
+    fn verify_cli() {
+        Cli::command()
+        .debug_assert();
+    }
+
+    fn test_args(args: &Vec<&str>, success: bool) {
+        let mut cmd = Command::cargo_bin("tempmaster").unwrap();
+        for arg in args {
+            cmd.arg(arg);
+        }
+        if success {
+            cmd.assert().success();
+        } else {
+            cmd.assert().failure();
+        }
+    }
+
+    #[test]
+    fn test_args_all() {
+        fs::File::create("test.txt").unwrap();
+        test_args(&vec!["add", "test.txt"], true);
+        test_args(&vec!["list"], true);
+        test_args(&vec!["update", "test.txt", "test.txt"], true);
+        test_args(&vec!["clone", "test.txt"], false);
+        fs::remove_file("test.txt").unwrap();
+        test_args(&vec!["clone", "test.txt"], true);
+        test_args(&vec!["remove", "test.txt"], true);
+        test_args(&vec!["remove", "test.txt"], false);
+        fs::remove_file("test.txt").unwrap();
+    }
 }
