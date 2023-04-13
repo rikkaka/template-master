@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, Args};
-use std::{process, fs};
+use std::{process, fs, path::PathBuf};
 use dirs;
 use toml;
 
@@ -88,7 +88,7 @@ impl Master {
     }
 
     // Copy template to template
-    fn add(&mut self, add_args: AddArgs) -> Result<(), Box<dyn std::error::Error>> {
+    fn add(&mut self, add_args: AddArgs) -> Result<String, Box<dyn std::error::Error>> {
         // check if path exists
         let path = std::path::PathBuf::from(&add_args.path);
         let path = std::fs::canonicalize(&path)?;
@@ -114,11 +114,11 @@ impl Master {
                 fs::copy(&path, &target_file).unwrap();
             }
         }
-        Ok(())
+        Ok(String::from(format!("Template {} added", name)))
     }
 
-    fn remove(&mut self, remove_args: RemoveArgs) -> Result<(), Box<dyn std::error::Error>> {
-        let target_dir = self.templates_dir.join(remove_args.name);
+    fn remove(&mut self, remove_args: RemoveArgs) -> Result<String, Box<dyn std::error::Error>> {
+        let target_dir = self.templates_dir.join(&remove_args.name);
         if !target_dir.exists() {
             eprintln!("Template name not exists");
             process::exit(1);
@@ -131,24 +131,17 @@ impl Master {
                 fs::remove_file(&target_dir).unwrap();
             }
         }
-        Ok(())
+        Ok(String::from(format!("Template {} removed", &remove_args.name)))
     }
 
     // check templates_dir to get all templates
-    fn list_temps(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut templates = Vec::new();
-        for entry in std::fs::read_dir(&self.templates_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                templates.push(path.file_name().unwrap().to_str().unwrap().to_string());
-            }
-        }
-        println!("{:?}", templates);
-        Ok(())
+    fn list_temps(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let mut list_temps = ListTemps::new();
+        list_temps.search_templates(&self.templates_dir);
+        Ok(list_temps.get_list_for_print())
     }
 
-    fn update(&mut self, update_args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
+    fn update(&mut self, update_args: UpdateArgs) -> Result<String, Box<dyn std::error::Error>> {
         self.remove(RemoveArgs {
             name: update_args.name.clone(),
         })?;
@@ -156,11 +149,11 @@ impl Master {
             path: update_args.path,
             rename: update_args.rename,
         })?;
-        Ok(())
+        Ok(String::from(format!("Template {} updated", update_args.name)))
     }
 
-    fn clone(&mut self, clone_args: CloneArgs) -> Result<(), Box<dyn std::error::Error>> {
-        let template_dir = self.templates_dir.join(clone_args.name);
+    fn clone(&mut self, clone_args: CloneArgs) -> Result<String, Box<dyn std::error::Error>> {
+        let template_dir = self.templates_dir.join(&clone_args.name);
         if !template_dir.exists() {
             eprintln!("Template name not exists");
             process::exit(1);
@@ -176,19 +169,51 @@ impl Master {
                 fs::copy(&template_dir, &std::env::current_dir()?).unwrap();
             }
         }
-        Ok(())
+        Ok(String::from(format!("Template {} cloned", &clone_args.name)))
+    }
+}
+
+struct ListTemps {
+    templasts: Vec<String>,
+}
+
+impl ListTemps {
+    fn new() -> Self {
+        Self {
+            templasts: Vec::new(),
+        }
+    }
+
+    // - template1
+    // - template2
+    // ...
+    fn get_list_for_print(&self) -> String {
+        let mut list_str = String::new();
+        for temp in &self.templasts {
+            list_str.push_str(format!(" - {}\n", temp).as_str());
+        }
+        list_str.trim_end().to_string()
+    }
+
+    fn search_templates(&mut self, templates_dir: &PathBuf) {
+        for entry in std::fs::read_dir(templates_dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            self.templasts.push(path.file_name().unwrap().to_str().unwrap().to_string());
+        }
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut master = Master::new();
     let cli = Cli::parse();
-    match cli.command {
+    let result_str = match cli.command {
         Commands::Add(add_args) => master.add(add_args)?,
         Commands::Remove(remove_args) => master.remove(remove_args)?,
         Commands::List(_) => master.list_temps()?,
         Commands::Update(update_args) => master.update(update_args)?,
         Commands::Clone(clone_args) => master.clone(clone_args)?,
-    }
+    };
+    println!("{}", result_str);
     Ok(())
 }
